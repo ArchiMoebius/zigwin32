@@ -66,6 +66,7 @@ pub const TOKEN_PRIVILEGES_ATTRIBUTES = packed struct(u32) {
     _30: u1 = 0,
     USED_FOR_ACCESS: u1 = 0,
 };
+pub const SE_PRIVILEGE_DISABLED = TOKEN_PRIVILEGES_ATTRIBUTES{};
 pub const SE_PRIVILEGE_ENABLED = TOKEN_PRIVILEGES_ATTRIBUTES{ .ENABLED = 1 };
 pub const SE_PRIVILEGE_ENABLED_BY_DEFAULT = TOKEN_PRIVILEGES_ATTRIBUTES{ .ENABLED_BY_DEFAULT = 1 };
 pub const SE_PRIVILEGE_REMOVED = TOKEN_PRIVILEGES_ATTRIBUTES{ .REMOVED = 1 };
@@ -189,7 +190,7 @@ pub const SUB_CONTAINERS_ONLY_INHERIT = ACE_FLAGS{ .CONTAINER_INHERIT_ACE = 1 };
 pub const SUB_OBJECTS_ONLY_INHERIT = ACE_FLAGS{ .OBJECT_INHERIT_ACE = 1 };
 pub const INHERIT_NO_PROPAGATE = ACE_FLAGS{ .NO_PROPAGATE_INHERIT_ACE = 1 };
 pub const INHERIT_ONLY = ACE_FLAGS{ .INHERIT_ONLY_ACE = 1 };
-pub const NO_INHERITANCE = ACE_FLAGS{ };
+pub const NO_INHERITANCE = ACE_FLAGS{};
 
 pub const OBJECT_SECURITY_INFORMATION = packed struct(u32) {
     OWNER_SECURITY_INFORMATION: u1 = 0,
@@ -398,7 +399,7 @@ pub const CLAIM_SECURITY_ATTRIBUTE_TYPE_SID = CLAIM_SECURITY_ATTRIBUTE_VALUE_TYP
 pub const CLAIM_SECURITY_ATTRIBUTE_TYPE_BOOLEAN = CLAIM_SECURITY_ATTRIBUTE_VALUE_TYPE.BOOLEAN;
 
 pub const PLSA_AP_CALL_PACKAGE_UNTRUSTED = switch (@import("builtin").zig_backend) {
-    .stage1 => fn(
+    .stage1 => fn (
         ClientRequest: ?*?*anyopaque,
         // TODO: what to do with BytesParamIndex 3?
         ProtocolSubmitBuffer: ?*anyopaque,
@@ -408,7 +409,7 @@ pub const PLSA_AP_CALL_PACKAGE_UNTRUSTED = switch (@import("builtin").zig_backen
         ReturnBufferLength: ?*u32,
         ProtocolStatus: ?*i32,
     ) callconv(@import("std").os.windows.WINAPI) NTSTATUS,
-    else => *const fn(
+    else => *const fn (
         ClientRequest: ?*?*anyopaque,
         // TODO: what to do with BytesParamIndex 3?
         ProtocolSubmitBuffer: ?*anyopaque,
@@ -418,17 +419,18 @@ pub const PLSA_AP_CALL_PACKAGE_UNTRUSTED = switch (@import("builtin").zig_backen
         ReturnBufferLength: ?*u32,
         ProtocolStatus: ?*i32,
     ) callconv(@import("std").os.windows.WINAPI) NTSTATUS,
-} ;
+};
 
 pub const SEC_THREAD_START = switch (@import("builtin").zig_backend) {
-    .stage1 => fn(
+    .stage1 => fn (
         lpThreadParameter: ?*anyopaque,
     ) callconv(@import("std").os.windows.WINAPI) u32,
-    else => *const fn(
+    else => *const fn (
         lpThreadParameter: ?*anyopaque,
     ) callconv(@import("std").os.windows.WINAPI) u32,
-} ;
+};
 
+// https://www.installsetupconfig.com/win32programming/accesscontrollistacl2_1.html
 pub const TOKEN_ACCESS_MASK = packed struct(u32) {
     ASSIGN_PRIMARY: u1 = 0,
     DUPLICATE: u1 = 0,
@@ -455,13 +457,13 @@ pub const TOKEN_ACCESS_MASK = packed struct(u32) {
     _22: u1 = 0,
     _23: u1 = 0,
     ACCESS_SYSTEM_SECURITY: u1 = 0,
-    _25: u1 = 0,
+    MAXIMUM_ALLOWED: u1 = 0,
     _26: u1 = 0,
     _27: u1 = 0,
-    _28: u1 = 0,
-    _29: u1 = 0,
-    _30: u1 = 0,
-    _31: u1 = 0,
+    GENERIC_ALL: u1 = 0,
+    GENERIC_EXECUTE: u1 = 0,
+    GENERIC_WRITE: u1 = 0,
+    GENERIC_READ: u1 = 0,
     // EXECUTE (bit index 17) conflicts with READ_CONTROL
 };
 pub const TOKEN_DELETE = TOKEN_ACCESS_MASK{ .DELETE = 1 };
@@ -469,6 +471,7 @@ pub const TOKEN_READ_CONTROL = TOKEN_ACCESS_MASK{ .READ_CONTROL = 1 };
 pub const TOKEN_WRITE_DAC = TOKEN_ACCESS_MASK{ .WRITE_DAC = 1 };
 pub const TOKEN_WRITE_OWNER = TOKEN_ACCESS_MASK{ .WRITE_OWNER = 1 };
 pub const TOKEN_ACCESS_SYSTEM_SECURITY = TOKEN_ACCESS_MASK{ .ACCESS_SYSTEM_SECURITY = 1 };
+pub const TOKEN_MAXIMUM_ALLOWED = TOKEN_ACCESS_MASK{ .MAXIMUM_ALLOWED = 1 };
 pub const TOKEN_ASSIGN_PRIMARY = TOKEN_ACCESS_MASK{ .ASSIGN_PRIMARY = 1 };
 pub const TOKEN_DUPLICATE = TOKEN_ACCESS_MASK{ .DUPLICATE = 1 };
 pub const TOKEN_IMPERSONATE = TOKEN_ACCESS_MASK{ .IMPERSONATE = 1 };
@@ -478,6 +481,15 @@ pub const TOKEN_ADJUST_PRIVILEGES = TOKEN_ACCESS_MASK{ .ADJUST_PRIVILEGES = 1 };
 pub const TOKEN_ADJUST_GROUPS = TOKEN_ACCESS_MASK{ .ADJUST_GROUPS = 1 };
 pub const TOKEN_ADJUST_DEFAULT = TOKEN_ACCESS_MASK{ .ADJUST_DEFAULT = 1 };
 pub const TOKEN_ADJUST_SESSIONID = TOKEN_ACCESS_MASK{ .ADJUST_SESSIONID = 1 };
+pub const TOKEN_GENERIC_ALL = TOKEN_ACCESS_MASK{
+    .GENERIC_ALL = 1,
+    .GENERIC_EXECUTE = 1,
+    .GENERIC_WRITE = 1,
+    .GENERIC_READ = 1,
+};
+pub const TOKEN_GENERIC_EXECUTE = TOKEN_ACCESS_MASK{ .GENERIC_EXECUTE = 1 };
+pub const TOKEN_GENERIC_WRITE = TOKEN_ACCESS_MASK{ .GENERIC_WRITE = 1 };
+pub const TOKEN_GENERIC_READ = TOKEN_ACCESS_MASK{ .GENERIC_READ = 1 };
 pub const TOKEN_READ = TOKEN_ACCESS_MASK{
     .QUERY = 1,
     .READ_CONTROL = 1,
@@ -1467,7 +1479,6 @@ pub const QUOTA_LIMITS = extern struct {
     TimeLimit: LARGE_INTEGER,
 };
 
-
 //--------------------------------------------------------------------------------
 // Section: Functions (133)
 //--------------------------------------------------------------------------------
@@ -2224,8 +2235,7 @@ pub extern "advapi32" fn QuerySecurityAccessMask(
 ) callconv(@import("std").os.windows.WINAPI) void;
 
 // TODO: this type is limited to platform 'windows5.1.2600'
-pub extern "advapi32" fn RevertToSelf(
-) callconv(@import("std").os.windows.WINAPI) BOOL;
+pub extern "advapi32" fn RevertToSelf() callconv(@import("std").os.windows.WINAPI) BOOL;
 
 // TODO: this type is limited to platform 'windows5.1.2600'
 pub extern "advapi32" fn SetAclInformation(
@@ -2681,7 +2691,6 @@ pub extern "ntdll" fn RtlConvertSidToUnicodeString(
     AllocateDestinationString: BOOLEAN,
 ) callconv(@import("std").os.windows.WINAPI) NTSTATUS;
 
-
 //--------------------------------------------------------------------------------
 // Section: Unicode Aliases (18)
 //--------------------------------------------------------------------------------
@@ -2728,24 +2737,24 @@ pub usingnamespace switch (@import("zig.zig").unicode_mode) {
         pub const LogonUserEx = thismodule.LogonUserExW;
     },
     .unspecified => if (@import("builtin").is_test) struct {
-        pub const AccessCheckAndAuditAlarm = *opaque{};
-        pub const AccessCheckByTypeAndAuditAlarm = *opaque{};
-        pub const AccessCheckByTypeResultListAndAuditAlarm = *opaque{};
-        pub const AccessCheckByTypeResultListAndAuditAlarmByHandle = *opaque{};
-        pub const GetFileSecurity = *opaque{};
-        pub const ObjectCloseAuditAlarm = *opaque{};
-        pub const ObjectDeleteAuditAlarm = *opaque{};
-        pub const ObjectOpenAuditAlarm = *opaque{};
-        pub const ObjectPrivilegeAuditAlarm = *opaque{};
-        pub const PrivilegedServiceAuditAlarm = *opaque{};
-        pub const SetFileSecurity = *opaque{};
-        pub const LookupAccountSid = *opaque{};
-        pub const LookupAccountName = *opaque{};
-        pub const LookupPrivilegeValue = *opaque{};
-        pub const LookupPrivilegeName = *opaque{};
-        pub const LookupPrivilegeDisplayName = *opaque{};
-        pub const LogonUser = *opaque{};
-        pub const LogonUserEx = *opaque{};
+        pub const AccessCheckAndAuditAlarm = *opaque {};
+        pub const AccessCheckByTypeAndAuditAlarm = *opaque {};
+        pub const AccessCheckByTypeResultListAndAuditAlarm = *opaque {};
+        pub const AccessCheckByTypeResultListAndAuditAlarmByHandle = *opaque {};
+        pub const GetFileSecurity = *opaque {};
+        pub const ObjectCloseAuditAlarm = *opaque {};
+        pub const ObjectDeleteAuditAlarm = *opaque {};
+        pub const ObjectOpenAuditAlarm = *opaque {};
+        pub const ObjectPrivilegeAuditAlarm = *opaque {};
+        pub const PrivilegedServiceAuditAlarm = *opaque {};
+        pub const SetFileSecurity = *opaque {};
+        pub const LookupAccountSid = *opaque {};
+        pub const LookupAccountName = *opaque {};
+        pub const LookupPrivilegeValue = *opaque {};
+        pub const LookupPrivilegeName = *opaque {};
+        pub const LookupPrivilegeDisplayName = *opaque {};
+        pub const LogonUser = *opaque {};
+        pub const LogonUserEx = *opaque {};
     } else struct {
         pub const AccessCheckAndAuditAlarm = @compileError("'AccessCheckAndAuditAlarm' requires that UNICODE be set to true or false in the root module");
         pub const AccessCheckByTypeAndAuditAlarm = @compileError("'AccessCheckByTypeAndAuditAlarm' requires that UNICODE be set to true or false in the root module");
@@ -2786,12 +2795,14 @@ const UNICODE_STRING = @import("foundation.zig").UNICODE_STRING;
 
 test {
     // The following '_ = <FuncPtrType>' lines are a workaround for https://github.com/ziglang/zig/issues/4476
-    if (@hasDecl(@This(), "PLSA_AP_CALL_PACKAGE_UNTRUSTED")) { _ = PLSA_AP_CALL_PACKAGE_UNTRUSTED; }
-    if (@hasDecl(@This(), "SEC_THREAD_START")) { _ = SEC_THREAD_START; }
+    if (@hasDecl(@This(), "PLSA_AP_CALL_PACKAGE_UNTRUSTED")) {
+        _ = PLSA_AP_CALL_PACKAGE_UNTRUSTED;
+    }
+    if (@hasDecl(@This(), "SEC_THREAD_START")) {
+        _ = SEC_THREAD_START;
+    }
 
-    @setEvalBranchQuota(
-        comptime @import("std").meta.declarations(@This()).len * 3
-    );
+    @setEvalBranchQuota(comptime @import("std").meta.declarations(@This()).len * 3);
 
     // reference all the pub declarations
     if (!@import("builtin").is_test) return;
